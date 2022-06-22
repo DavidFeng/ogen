@@ -55,21 +55,21 @@ func (c *Client) {{ $op.Name }}(ctx context.Context {{ if $op.Request }}, reques
 					if err := func() error {
 						{{- template "validate" elem $type "request" }}
 					}(); err != nil {
-						{{ template "clret" $op }} errors.Wrap(err, "validate")
+						{{ template "client_return_stmt" $op }} errors.Wrap(err, "validate")
 					}
 				{{- else }}
 				// Validation is not required for this type.
 				{{- end }}
 			{{- end }}
 			default:
-				{{ template "clret" $op }}  errors.Errorf("unexpected request type: %T", request)
+				{{ template "client_return_stmt" $op }}  errors.Errorf("unexpected request type: %T", request)
 			}
 		{{- else }}
 			{{- if $op.Request.Type.NeedValidation }}
 				if err := func() error {
 					{{- template "validate" elem $op.Request.Type "request" }}
 				}(); err != nil {
-					{{ template "clret" $op }} errors.Wrap(err, "validate")
+					{{ template "client_return_stmt" $op }} errors.Wrap(err, "validate")
 				}
 			{{- end }}
 		{{- end }}
@@ -105,7 +105,7 @@ func (c *Client) {{ $op.Name }}(ctx context.Context {{ if $op.Request }}, reques
 	r := ht.NewRequest(ctx, {{ $op.Spec.HTTPMethod | upper | quote }}, u, nil)
 	{{- if $op.Request }}
 	if err := encode{{ $op.Name }}Request(request, r); err != nil {
-		{{ template "clret" $op }} errors.Wrap(err, "encode request")
+		{{ template "client_return_stmt" $op }} errors.Wrap(err, "encode request")
 	}
 	{{- end }}
 
@@ -116,13 +116,13 @@ func (c *Client) {{ $op.Name }}(ctx context.Context {{ if $op.Request }}, reques
 	{{- template "encode_cookie_params" $op }}
 	{{- range $s := $op.Security }}
 	if err := c.security{{ $s.Security.Type.Name }}(ctx, {{ quote $op.Name }}, r); err != nil {
-		{{ template "clret" $op }} errors.Wrap(err, "security")
+		{{ template "client_return_stmt" $op }} errors.Wrap(err, "security")
 	}
 	{{- end }}
 
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
-		{{ template "clret" $op }} errors.Wrap(err, "do request")
+		{{ template "client_return_stmt" $op }} errors.Wrap(err, "do request")
 	}
 	defer resp.Body.Close()
 
@@ -165,7 +165,7 @@ r.AddCookie(&http.Cookie{
 {{- end }}{{/* Range over params */}}
 {{ end }}
 
-{{- define "clret" }}{{- /*Client method return statement*/ -}}
+{{- define "client_return_stmt" }}
 {{- /*gotype: github.com/ogen-go/ogen/gen/ir.Operation*/ -}}
 {{ if $.Responses.BlankType }}return {{ else }}return res, {{ end }}
 {{- end }}
